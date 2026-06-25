@@ -1,0 +1,21 @@
+{
+  "name": "Painel do Time",
+  "short_name": "Time CEO",
+  "description": "Painel de desenvolvimento do time estratégico",
+  "start_url": "./desktop.html",
+  "display": "standalone",
+  "background_color": "#f5f5f3",
+  "theme_color": "#185FA5",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%230F6E56'/><rect x='36' y='60' width='120' height='80' rx='8' fill='none' stroke='white' stroke-width='8'/><line x1='36' y1='88' x2='156' y2='88' stroke='white' stroke-width='8'/><line x1='76' y1='60' x2='76' y2='140' stroke='white' stroke-width='6'/><line x1='56' y1='108' x2='66' y2='108' stroke='white' stroke-width='5' stroke-linecap='round'/><line x1='56' y1='122' x2='66' y2='122' stroke='white' stroke-width='5' stroke-linecap='round'/><line x1='86' y1='108' x2='146' y2='108' stroke='white' stroke-width='5' stroke-linecap='round'/><line x1='86' y1='122' x2='130' y2='122' stroke='white' stroke-width='5' stroke-linecap='round'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%230F6E56'/><rect x='90' y='150' width='332' height='220' rx='20' fill='none' stroke='white' stroke-width='20'/><line x1='90' y1='230' x2='422' y2='230' stroke='white' stroke-width='20'/><line x1='196' y1='150' x2='196' y2='370' stroke='white' stroke-width='16'/><line x1='120' y1='278' x2='166' y2='278' stroke='white' stroke-width='14' stroke-linecap='round'/><line x1='120' y1='320' x2='166' y2='320' stroke='white' stroke-width='14' stroke-linecap='round'/><line x1='216' y1='278' x2='392' y2='278' stroke='white' stroke-width='14' stroke-linecap='round'/><line x1='216' y1='320' x2='340' y2='320' stroke='white' stroke-width='14' stroke-linecap='round'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

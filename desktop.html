@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel do time — CEO</title>
+<link rel="manifest" href="manifest-desktop.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Time CEO">
+<meta name="theme-color" content="#0F6E56">
+<style>
+  :root{
+    --blue:#185FA5;--blue-light:#E6F1FB;--blue-mid:#378ADD;--blue-dark:#0C447C;
+    --teal:#0F6E56;--teal-light:#E1F5EE;--teal-mid:#1D9E75;
+    --amber:#854F0B;--amber-light:#FAEEDA;--amber-mid:#EF9F27;
+    --green-light:#EAF3DE;--green-dark:#27500A;--green-mid:#97C459;
+    --red-light:#FCEBEB;--red-dark:#A32D2D;
+    --text:#1a1a1a;--text2:#555;--text3:#999;
+    --border:rgba(0,0,0,.09);--bg:#f5f5f3;--card:#fff;
+    --radius:12px;--radius-sm:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text)}
+  .topbar{background:var(--card);border-bottom:0.5px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+  .topbar h1{font-size:16px;font-weight:600}
+  .topbar .right{display:flex;align-items:center;gap:10px}
+  .btn-outline{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;font-size:13px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:6px}
+  .btn-outline:hover{background:var(--bg)}
+  .btn-solid{padding:7px 16px;border-radius:var(--radius-sm);border:none;background:var(--blue);color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+  .last-sync{font-size:12px;color:var(--text3)}
+  .page{max-width:1100px;margin:0 auto;padding:24px 32px}
+  .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px}
+  .metric{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+  .metric .lbl{font-size:12px;color:var(--text2);margin-bottom:6px}
+  .metric .val{font-size:26px;font-weight:300}
+  .metric .sub{font-size:11px;color:var(--text3);margin-top:3px}
+  .grid{display:grid;grid-template-columns:240px 1fr;gap:18px}
+  .sidebar{}
+  .sector-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;padding:10px 4px 5px}
+  .person-row{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:9px;margin-bottom:5px;transition:border-color .15s}
+  .person-row:hover{border-color:rgba(0,0,0,.2)}
+  .person-row.active{border-color:var(--blue-mid);background:var(--blue-light)}
+  .person-row.inactive-row{opacity:.5}
+  .avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+  .av-s{background:#E6F1FB;color:#0C447C}
+  .av-c{background:#E1F5EE;color:#085041}
+  .av-n{background:#FAEEDA;color:#633806}
+  .pm{flex:1;min-width:0}
+  .pm .nm{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pm .rl{font-size:11px;color:var(--text2)}
+  .p-cnt{font-size:11px;font-weight:600;color:var(--blue-mid);background:var(--blue-light);padding:2px 6px;border-radius:20px;flex-shrink:0}
+  .feed-panel{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .feed-header{padding:16px 20px 12px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .feed-header h2{font-size:15px;font-weight:600}
+  .filter-row{display:flex;gap:5px}
+  .filter-btn{padding:5px 11px;border-radius:20px;font-size:12px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text2)}
+  .filter-btn.active{background:var(--bg);color:var(--text);font-weight:500;border-color:rgba(0,0,0,.2)}
+  .sector-filter{display:flex;gap:5px}
+  .sector-btn{padding:4px 10px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text2)}
+  .sector-btn.active{background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue-mid)}
+  .feed-subheader{padding:8px 20px;border-bottom:0.5px solid var(--border);display:flex;gap:6px;background:var(--bg)}
+  .feed-scroll{padding:14px 20px;max-height:500px;overflow-y:auto}
+  .feed-empty{color:var(--text3);font-size:14px;padding:20px 0}
+  .feed-item{border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start}
+  .feed-item.inactive-feed{opacity:.6;background:var(--bg)}
+  .feed-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+  .fd-pos{background:var(--green-mid)}
+  .fd-dev{background:var(--amber-mid)}
+  .fd-met{background:var(--blue-mid)}
+  .feed-body{flex:1}
+  .feed-meta{display:flex;gap:7px;align-items:center;margin-bottom:4px;flex-wrap:wrap}
+  .feed-tag{font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px}
+  .ft-pos{background:var(--green-light);color:var(--green-dark)}
+  .ft-dev{background:var(--amber-light);color:var(--amber)}
+  .ft-met{background:var(--blue-light);color:var(--blue-dark)}
+  .feed-sector{font-size:11px;color:var(--text3);background:var(--bg);padding:2px 6px;border-radius:20px}
+  .feed-who{font-size:12px;color:var(--text2);font-weight:500}
+  .feed-date{font-size:11px;color:var(--text3);margin-left:auto}
+  .feed-text{font-size:13px;color:var(--text);line-height:1.5}
+  .inactive-badge{font-size:10px;color:var(--red-dark);background:var(--red-light);padding:1px 5px;border-radius:20px;margin-left:4px}
+  .ceo-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+  .ceo-overlay.open{display:flex}
+  .ceo-box{background:var(--card);border-radius:16px;padding:28px 32px;width:580px;max-height:88vh;overflow-y:auto;position:relative}
+  .ceo-box h2{font-size:20px;font-weight:600;margin-bottom:3px}
+  .ceo-date{font-size:13px;color:var(--text2);margin-bottom:22px}
+  .ceo-close{position:absolute;top:18px;right:20px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2)}
+  .ceo-section{margin-bottom:18px}
+  .ceo-section h3{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:9px}
+  .ceo-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);font-size:14px}
+  .ceo-row:last-child{border-bottom:none}
+  .ceo-right{display:flex;gap:8px;align-items:center}
+  .sector-tag{font-size:11px;padding:2px 7px;border-radius:20px;font-weight:500}
+  .st-mkt{background:var(--blue-light);color:var(--blue-dark)}
+  .st-cs{background:var(--teal-light);color:var(--teal)}
+  .print-btn{display:block;width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--blue);color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer;margin-top:18px}
+  @media print{.topbar,.btn-outline,.btn-solid,.filter-row,.sidebar,.ceo-overlay{display:none!important}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>Desenvolvimento do time — Marketing & CS</h1>
+  <div class="right">
+    <span class="last-sync" id="lastSync"></span>
+    <button class="btn-outline" onclick="loadData()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Sincronizar
+    </button>
+    <button class="btn-solid" onclick="openCEO()">Visão CEO</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="metrics" id="metrics">
+    <div class="metric"><div class="lbl">Marketing</div><div class="val" id="m-mkt">3</div><div class="sub">pessoas</div></div>
+    <div class="metric"><div class="lbl">CS</div><div class="val" id="m-cs">5</div><div class="sub">pessoas</div></div>
+    <div class="metric"><div class="lbl">Feedbacks</div><div class="val" id="m-total">0</div><div class="sub">total</div></div>
+    <div class="metric"><div class="lbl">Esta semana</div><div class="val" id="m-week">0</div><div class="sub">novos</div></div>
+    <div class="metric"><div class="lbl">Em integração</div><div class="val">2</div><div class="sub">João Victor · Ellen</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="sidebar" id="sidebar"></div>
+    <div class="feed-panel">
+      <div class="feed-header">
+        <h2 id="panelTitle">Todos os feedbacks</h2>
+        <div class="filter-row">
+          <button class="filter-btn active" onclick="setFilter('all',this)">Todos</button>
+          <button class="filter-btn" onclick="setFilter('pos',this)">Positivos</button>
+          <button class="filter-btn" onclick="setFilter('dev',this)">Desenvolvimento</button>
+          <button class="filter-btn" onclick="setFilter('met',this)">Reuniões</button>
+        </div>
+      </div>
+      <div class="feed-subheader">
+        <button class="sector-btn active" onclick="setSector('all',this)">Todos</button>
+        <button class="sector-btn" onclick="setSector('mkt',this)">Marketing</button>
+        <button class="sector-btn" onclick="setSector('cs',this)">CS</button>
+      </div>
+      <div class="feed-scroll" id="feedList">
+        <div class="feed-empty">Carregando feedbacks...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ceo-overlay" id="ceoOverlay">
+  <div class="ceo-box">
+    <button class="ceo-close" onclick="closeCEO()">×</button>
+    <h2>Relatório executivo</h2>
+    <div class="ceo-date" id="ceoDate"></div>
+    <div id="ceoContent"></div>
+    <button class="print-btn" onclick="window.print()">Imprimir / Salvar PDF</button>
+  </div>
+</div>
+
+<script>
+const team = [
+  {id:1,name:'Victor',      role:'Supervisor',                 type:'s',sector:'mkt',active:true},
+  {id:2,name:'João Victor', role:'Supervisor',                 type:'n',sector:'mkt',active:true},
+  {id:3,name:'Cleber',      role:'Diretor de Arte',            type:'c',sector:'mkt',active:true},
+  {id:4,name:'Joseline',    role:'Supervisora',                type:'s',sector:'cs', active:true},
+  {id:5,name:'Esther',      role:'Supervisora',                type:'s',sector:'cs', active:true, note:'licença maternidade em breve'},
+  {id:6,name:'Ellen',       role:'Supervisora',                type:'n',sector:'cs', active:true},
+  {id:7,name:'Verônica',    role:'Analista Estratégica',       type:'c',sector:'cs', active:true},
+  {id:8,name:'Maria Beatriz',role:'Analista Estratégica Sênior',type:'c',sector:'cs',active:true},
+];
+
+const typeLabel={pos:'Positivo',dev:'Desenvolvimento',met:'Reunião'};
+let allFeeds=[], selPerson=null, activeFilter='all', activeSector='all';
+
+function initials(n){return n.split(' ').slice(0,2).map(x=>x[0].toUpperCase()).join('');}
+function avClass(t){return t==='c'?'av-c':t==='n'?'av-n':'av-s';}
+
+function loadData(){
+  const stored = localStorage.getItem('feedbacks');
+  if(stored){
+    try{ allFeeds = JSON.parse(stored); }catch(e){ allFeeds=[]; }
+  }
+  const now = new Date();
+  document.getElementById('lastSync').textContent='Atualizado '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  updateMetrics(); renderSidebar(); renderFeeds();
+}
+
+function updateMetrics(){
+  const now = new Date(), weekAgo = new Date(now-7*864e5);
+  document.getElementById('m-total').textContent = allFeeds.length;
+  document.getElementById('m-week').textContent = allFeeds.filter(f=>new Date(f.datetime)>weekAgo).length;
+}
+
+function renderSidebar(){
+  const sectors=[{key:'mkt',label:'Marketing'},{key:'cs',label:'CS'}];
+  let html='';
+  const allRow=`<div class="person-row active" id="pr-all" onclick="selectPerson(null)">
+    <div class="avatar av-s" style="background:#f0f0ee;color:#888;font-size:15px">—</div>
+    <div class="pm"><div class="nm">Todos</div><div class="rl">ver todos</div></div>
+  </div>`;
+  html+=allRow;
+  sectors.forEach(s=>{
+    html+=`<div class="sector-label">${s.label}</div>`;
+    team.filter(p=>p.sector===s.key).forEach(p=>{
+      const cnt=allFeeds.filter(f=>f.personId===p.id).length;
+      const inactive=p.active===false;
+      let noteBadge='';
+      if(p.note&&p.note.includes('licença')) noteBadge=`<span style="font-size:9px;color:var(--red-dark);background:var(--red-light);padding:1px 4px;border-radius:20px;margin-left:3px">lic.</span>`;
+      else if(p.type==='n') noteBadge=`<span style="font-size:9px;color:var(--amber);background:var(--amber-light);padding:1px 4px;border-radius:20px;margin-left:3px">em breve</span>`;
+      html+=`<div class="person-row${inactive?' inactive-row':''}" id="pr-${p.id}" onclick="selectPerson(${p.id})">
+        <div class="avatar ${avClass(p.type)}">${initials(p.name)}</div>
+        <div class="pm"><div class="nm">${p.name}${noteBadge}</div><div class="rl">${p.role}</div></div>
+        ${cnt>0?`<span class="p-cnt">${cnt}</span>`:''}
+      </div>`;
+    });
+  });
+  document.getElementById('sidebar').innerHTML=html;
+}
+
+function selectPerson(id){
+  selPerson=id;
+  document.querySelectorAll('.person-row').forEach(r=>r.classList.remove('active'));
+  document.getElementById(id?'pr-'+id:'pr-all').classList.add('active');
+  const p=id?team.find(x=>x.id===id):null;
+  document.getElementById('panelTitle').textContent=p?p.name+' — feedbacks':'Todos os feedbacks';
+  renderFeeds();
+}
+
+function setFilter(f,btn){
+  activeFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderFeeds();
+}
+
+function setSector(s,btn){
+  activeSector=s;
+  document.querySelectorAll('.sector-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderFeeds();
+}
+
+function renderFeeds(){
+  let feeds=allFeeds;
+  if(selPerson) feeds=feeds.filter(f=>f.personId===selPerson);
+  if(activeFilter!=='all') feeds=feeds.filter(f=>f.type===activeFilter);
+  if(activeSector!=='all') feeds=feeds.filter(f=>f.sector===activeSector);
+  const list=document.getElementById('feedList');
+  if(!feeds.length){list.innerHTML='<div class="feed-empty">Nenhum feedback encontrado.</div>';return;}
+  const showWho=!selPerson;
+  list.innerHTML=feeds.map(f=>{
+    const p=team.find(x=>x.id===f.personId);
+    const inactive=p&&p.active===false;
+    const sectorLabel=f.sector==='mkt'?'Marketing':'CS';
+    return `<div class="feed-item${inactive?' inactive-feed':''}">
+      <div class="feed-dot fd-${f.type}"></div>
+      <div class="feed-body">
+        <div class="feed-meta">
+          <span class="feed-tag ft-${f.type}">${typeLabel[f.type]}</span>
+          <span class="feed-sector">${sectorLabel}</span>
+          ${showWho?`<span class="feed-who">${f.person}${inactive?'<span class="inactive-badge">inativo</span>':''}</span>`:''}
+          <span class="feed-date">${f.date}</span>
+        </div>
+        <div class="feed-text">${f.text}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openCEO(){
+  const now=new Date();
+  document.getElementById('ceoDate').textContent=now.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const mkt=team.filter(p=>p.sector==='mkt');
+  const cs=team.filter(p=>p.sector==='cs');
+  const pos=allFeeds.filter(f=>f.type==='pos').length;
+  const dev=allFeeds.filter(f=>f.type==='dev').length;
+  const met=allFeeds.filter(f=>f.type==='met').length;
+  const makeRows=items=>items.map(p=>{
+    const cnt=allFeeds.filter(f=>f.personId===p.id).length;
+    let badge='';
+    if(p.note&&p.note.includes('licença')) badge=`<span style="font-size:11px;color:var(--red-dark);background:var(--red-light);padding:2px 6px;border-radius:20px">licença em breve</span>`;
+    else if(p.type==='n') badge=`<span style="font-size:11px;color:var(--amber);background:var(--amber-light);padding:2px 6px;border-radius:20px">em integração</span>`;
+    else if(p.type==='c') badge=`<span style="font-size:11px;color:var(--teal);background:var(--teal-light);padding:2px 6px;border-radius:20px">estratégico</span>`;
+    return `<div class="ceo-row"><span>${p.name} ${badge}</span><span style="font-size:12px;color:var(--text2)">${cnt} feedback${cnt!==1?'s':''}</span></div>`;
+  }).join('');
+  document.getElementById('ceoContent').innerHTML=`
+    <div class="ceo-section"><h3>Marketing (${mkt.length} pessoas)</h3>${makeRows(mkt)}</div>
+    <div class="ceo-section"><h3>CS (${cs.length} pessoas)</h3>${makeRows(cs)}</div>
+    <div class="ceo-section"><h3>Distribuição de feedbacks (${allFeeds.length} total)</h3>
+      <div class="ceo-row"><span>Positivos</span><span style="font-weight:600;color:var(--green-dark)">${pos}</span></div>
+      <div class="ceo-row"><span>Desenvolvimento</span><span style="font-weight:600;color:var(--amber)">${dev}</span></div>
+      <div class="ceo-row"><span>Reuniões</span><span style="font-weight:600;color:var(--blue-dark)">${met}</span></div>
+    </div>`;
+  document.getElementById('ceoOverlay').classList.add('open');
+}
+
+function closeCEO(){document.getElementById('ceoOverlay').classList.remove('open');}
+window.onload=loadData;
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js");}</script>
+</body>
+</html>

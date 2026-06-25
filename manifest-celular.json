@@ -1,0 +1,22 @@
+{
+  "name": "Feedback Time",
+  "short_name": "Feedback",
+  "description": "Registro de feedbacks por voz para o time",
+  "start_url": "./celular.html",
+  "display": "standalone",
+  "background_color": "#f5f5f3",
+  "theme_color": "#185FA5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23185FA5'/><path d='M96 52a20 20 0 0 1 20 20v30a20 20 0 0 1-40 0V72a20 20 0 0 1 20-20z' fill='white'/><path d='M66 100v6a30 30 0 0 0 60 0v-6M96 136v16M80 152h32' stroke='white' stroke-width='8' stroke-linecap='round' fill='none'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%23185FA5'/><path d='M256 130a54 54 0 0 1 54 54v80a54 54 0 0 1-108 0v-80a54 54 0 0 1 54-54z' fill='white'/><path d='M170 264v16a86 86 0 0 0 172 0v-16M256 366v40M214 406h84' stroke='white' stroke-width='20' stroke-linecap='round' fill='none'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
