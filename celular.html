@@ -83,6 +83,15 @@
   .add-form{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:12px}
   .add-form input,.add-form select{width:100%;margin-bottom:10px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--bg)}
   .add-form .add-btn{width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer}
+  .edit-form{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-top:8px}
+  .edit-form input,.edit-form select{width:100%;margin-bottom:8px;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;background:var(--card)}
+  .edit-form .edit-row{display:flex;gap:8px}
+  .edit-form .edit-row button{flex:1;padding:10px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;border:none;cursor:pointer}
+  .btn-confirm{background:var(--blue);color:#fff}
+  .btn-cancel{background:var(--bg);color:var(--text2);border:1px solid var(--border) !important}
+  .edit-note{font-size:11px;color:var(--text3);margin-bottom:6px}
+  .team-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
+  .icon-btn{background:none;border:none;cursor:pointer;padding:5px;color:var(--text3);font-size:15px;line-height:1}
 </style>
 </head>
 <body>
@@ -219,6 +228,13 @@ function renderPeople(){
     </div>`).join('');
 }
 
+function badgeHtml(p){
+  if(p.note && p.note.includes('licença')) return `<span class="badge-sm b-lic">licença</span>`;
+  if(p.type==='n') return `<span class="badge-sm b-new">em breve</span>`;
+  if(p.type==='c') return `<span class="badge-sm b-col">estratégico</span>`;
+  return '';
+}
+
 function renderTeamList(){
   const sectors = [{key:'mkt',label:'Marketing'},{key:'cs',label:'CS'}];
   let html = '';
@@ -226,24 +242,65 @@ function renderTeamList(){
     const members = team.filter(p=>p.sector===s.key);
     html += `<div class="sector-label">${s.label}</div>`;
     members.forEach(p=>{
-      let badge = '';
-      if(p.note && p.note.includes('licença')) badge = `<span class="badge-sm b-lic">licença</span>`;
-      else if(p.type==='n') badge = `<span class="badge-sm b-new">em breve</span>`;
-      else if(p.type==='c') badge = `<span class="badge-sm b-col">estratégico</span>`;
       const inactive = p.active===false ? ' style="opacity:.45"' : '';
-      html += `<div class="team-item"${inactive}>
-        <div class="avatar ${avClass(p.type)}">${initials(p.name)}</div>
-        <div class="tinfo">
-          <div class="tname">${p.name}${badge}</div>
-          <div class="trole">${p.role}</div>
+      html += `<div id="ti${p.id}">
+        <div class="team-item"${inactive}>
+          <div class="avatar ${avClass(p.type)}">${initials(p.name)}</div>
+          <div class="tinfo">
+            <div class="tname">${p.name}${badgeHtml(p)}</div>
+            <div class="trole">${p.role}</div>
+          </div>
+          <div class="team-actions">
+            <button class="icon-btn" onclick="toggleEdit(${p.id})" title="Editar">✎</button>
+            ${p.active!==false
+              ? `<button class="icon-btn" onclick="deactivate(${p.id})" title="Desativar" style="font-size:18px">×</button>`
+              : `<button class="icon-btn" onclick="reactivate(${p.id})" style="color:var(--blue);font-size:12px">reativar</button>`}
+          </div>
         </div>
-        ${p.active!==false
-          ? `<button onclick="deactivate(${p.id})" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:4px" title="Desativar">×</button>`
-          : `<button onclick="reactivate(${p.id})" style="background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:4px">reativar</button>`}
+        <div id="ef${p.id}" class="edit-form" style="display:none">
+          <div class="edit-note">Editando: <strong>${p.name}</strong></div>
+          <input type="text" id="en${p.id}" value="${p.name}" placeholder="Nome">
+          <input type="text" id="er${p.id}" value="${p.role}" placeholder="Cargo">
+          <select id="et${p.id}">
+            <option value="s"${p.type==='s'?' selected':''}>Supervisor(a)</option>
+            <option value="c"${p.type==='c'?' selected':''}>Colaborador(a) estratégico</option>
+            <option value="n"${p.type==='n'?' selected':''}>Em integração (em breve)</option>
+          </select>
+          <select id="es${p.id}">
+            <option value="mkt"${p.sector==='mkt'?' selected':''}>Marketing</option>
+            <option value="cs"${p.sector==='cs'?' selected':''}>CS</option>
+          </select>
+          <select id="enote${p.id}">
+            <option value=""${!p.note?' selected':''}>Sem observação</option>
+            <option value="licença maternidade em breve"${p.note&&p.note.includes('licença')?' selected':''}>Licença maternidade em breve</option>
+          </select>
+          <div class="edit-row">
+            <button class="btn-confirm" onclick="saveEdit(${p.id})">Salvar</button>
+            <button class="btn-cancel" onclick="toggleEdit(${p.id})">Cancelar</button>
+          </div>
+        </div>
       </div>`;
     });
   });
   document.getElementById('teamList').innerHTML = html;
+}
+
+function toggleEdit(id){
+  const ef = document.getElementById('ef'+id);
+  ef.style.display = ef.style.display==='none' ? 'block' : 'none';
+}
+
+function saveEdit(id){
+  const p = team.find(x=>x.id===id);
+  p.name   = document.getElementById('en'+id).value.trim() || p.name;
+  p.role   = document.getElementById('er'+id).value.trim() || p.role;
+  p.type   = document.getElementById('et'+id).value;
+  p.sector = document.getElementById('es'+id).value;
+  const note = document.getElementById('enote'+id).value;
+  if(note) p.note = note; else delete p.note;
+  localStorage.setItem('equipe',JSON.stringify(team));
+  renderPeople(); renderTeamList();
+  showToast(p.name+' atualizado(a)!');
 }
 
 function selectPerson(id){
