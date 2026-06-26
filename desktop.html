@@ -102,7 +102,7 @@
   <h1>Desenvolvimento do time — Marketing & CS</h1>
   <div class="right">
     <span class="last-sync" id="lastSync"></span>
-    <button class="btn-outline" onclick="loadData()">
+    <button class="btn-outline" onclick="loadFromDrive()">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
       Sincronizar
     </button>
@@ -289,8 +289,66 @@ function openCEO(){
 }
 
 function closeCEO(){document.getElementById('ceoOverlay').classList.remove('open');}
-window.onload=loadData;
+
+// Google Drive
+const CLIENT_ID = '124671268662-c8m7g0f3620buuv8e589t5f4aenk71v1.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+const FILE_NAME = 'feedbacks-time.json';
+let accessToken = null, tokenClient;
+
+function signIn(){
+  if(tokenClient){ tokenClient.requestAccessToken(); return; }
+  showDriveBanner('Erro ao conectar. Recarregue a página.');
+}
+
+function showDriveBanner(msg, err=true){
+  const b = document.getElementById('driveBanner');
+  if(b){ b.textContent = msg; b.style.background = err ? '#FCEBEB' : '#EAF3DE'; b.style.color = err ? '#A32D2D' : '#27500A'; b.style.display='block'; setTimeout(()=>b.style.display='none', 3000); }
+}
+
+async function loadFromDrive(){
+  if(!accessToken){ signIn(); return; }
+  const btn = document.querySelector('.btn-outline');
+  if(btn) btn.textContent = 'Sincronizando...';
+  try{
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}'+and+trashed=false&fields=files(id)`,{headers:{Authorization:'Bearer '+accessToken}});
+    const data = await res.json();
+    if(!data.files||!data.files.length){ document.getElementById('feedList').innerHTML='<div class="feed-empty">Nenhum arquivo encontrado. Registre feedbacks pelo celular primeiro.</div>'; if(btn) btn.innerHTML='&#x21BB; Sincronizar'; return; }
+    const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${data.files[0].id}?alt=media`,{headers:{Authorization:'Bearer '+accessToken}});
+    allFeeds = await fileRes.json();
+    const now = new Date();
+    document.getElementById('lastSync').textContent='Atualizado '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    updateMetrics(); renderSidebar(); renderFeeds();
+    showDriveBanner('Sincronizado!', false);
+  }catch(e){
+    document.getElementById('feedList').innerHTML='<div class="feed-empty">Erro ao carregar. Tente novamente.</div>';
+  }
+  if(btn) btn.innerHTML='&#x21BB; Sincronizar';
+}
+
+function loadData(){
+  const stored = localStorage.getItem('feedbacks');
+  if(stored){ try{ allFeeds=JSON.parse(stored); }catch(e){ allFeeds=[]; } }
+  const now = new Date();
+  document.getElementById('lastSync').textContent='Local · '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  updateMetrics(); renderSidebar(); renderFeeds();
+}
+
+window.onload=()=>{
+  loadData();
+  if(typeof google!=='undefined'&&google.accounts){
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPES,
+      callback:(resp)=>{
+        if(resp.access_token){ accessToken=resp.access_token; loadFromDrive(); }
+      }
+    });
+    tokenClient.requestAccessToken();
+  }
+};
 </script>
+<div id="driveBanner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:20px;font-size:14px;z-index:200;white-space:nowrap"></div>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js");}</script>
 </body>
 </html>
