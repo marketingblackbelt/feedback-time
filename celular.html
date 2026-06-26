@@ -103,9 +103,12 @@
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>Registrar feedback</h1>
-  <div class="header-sub" id="headerSub">Time · Marketing & CS</div>
+<div class="header" style="display:flex;align-items:center;justify-content:space-between">
+  <div>
+    <h1>Registrar feedback</h1>
+    <div class="header-sub" id="headerSub">Time · Marketing & CS</div>
+  </div>
+  <button id="driveBtn" onclick="connectDrive()" style="background:#185FA5;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0">Conectar Drive</button>
 </div>
 <div id="installBanner" style="display:none;background:#E6F1FB;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:0.5px solid rgba(0,0,0,.1)">
   <div style="display:flex;align-items:center;gap:8px">
@@ -479,10 +482,41 @@ async function saveFeed(){
     date:now.toLocaleDateString('pt-BR'),
     datetime:now.toISOString()
   };
+  // Salvar local sempre
   const saved = JSON.parse(localStorage.getItem('feedbacks')||'[]');
   saved.unshift(entry);
   localStorage.setItem('feedbacks',JSON.stringify(saved));
-  showToast('Salvo!');
+
+  // Salvar no Drive se conectado
+  if(accessToken){
+    try{
+      // Buscar arquivo existente
+      const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='feedbacks-time.json'+and+trashed=false&fields=files(id)`,{
+        headers:{Authorization:'Bearer '+accessToken}
+      });
+      const listData = await listRes.json();
+      const body = JSON.stringify(saved, null, 2);
+      if(listData.files && listData.files.length){
+        // Atualizar existente
+        await fetch(`https://www.googleapis.com/upload/drive/v3/files/${listData.files[0].id}?uploadType=media`,{
+          method:'PATCH', headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'}, body
+        });
+      } else {
+        // Criar novo
+        const meta = await fetch('https://www.googleapis.com/drive/v3/files',{
+          method:'POST', headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+          body:JSON.stringify({name:'feedbacks-time.json',mimeType:'application/json'})
+        });
+        const mj = await meta.json();
+        await fetch(`https://www.googleapis.com/upload/drive/v3/files/${mj.id}?uploadType=media`,{
+          method:'PATCH', headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'}, body
+        });
+      }
+      showToast('Salvo no Drive!');
+    } catch(e){ showToast('Salvo local (erro Drive)'); }
+  } else {
+    showToast('Salvo local — conecte o Drive');
+  }
   rawTranscript='';cleanTranscript='';
   document.getElementById('transcriptTxt').textContent='Fale após tocar no microfone...';
   document.getElementById('transcriptTxt').classList.add('ph');
@@ -505,12 +539,39 @@ window.addEventListener("beforeinstallprompt", e => {
 document.getElementById("installBtn") && document.getElementById("installBtn").addEventListener("click", () => {
   if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ document.getElementById("installBanner").style.display="none"; deferredPrompt=null; }); }
 });
+let tokenClient = null;
+
+function initGoogleAuth(){
+  if(typeof google === 'undefined' || !google.accounts) {
+    setTimeout(initGoogleAuth, 500); return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (resp) => {
+      if(resp.access_token){
+        accessToken = resp.access_token;
+        document.getElementById('driveBtn').textContent = '✓ Drive conectado';
+        document.getElementById('driveBtn').style.background = '#0F6E56';
+        showToast('Drive conectado!');
+      }
+    }
+  });
+}
+
+function connectDrive(){
+  if(tokenClient) tokenClient.requestAccessToken();
+  else showToast('Aguarde...', false);
+}
+
 window.onload=()=>{
   renderPeople();
   const wave=document.getElementById('wave');
   for(let i=0;i<12;i++){const b=document.createElement('div');b.className='wave-bar';b.style.height='4px';wave.appendChild(b);}
+  initGoogleAuth();
 };
 </script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js");}</script>
 </body>
 </html>
