@@ -92,6 +92,14 @@
   .edit-note{font-size:11px;color:var(--text3);margin-bottom:6px}
   .team-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
   .icon-btn{background:none;border:none;cursor:pointer;padding:5px;color:var(--text3);font-size:15px;line-height:1}
+  .sugg-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+  .sugg-item{padding:10px 12px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border)}
+  .sugg-item:last-child{border-bottom:none}
+  .sugg-item:active{background:var(--bg)}
+  .sugg-list{position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+  .sugg-item{padding:10px 12px;font-size:13px;cursor:pointer;border-bottom:0.5px solid var(--border)}
+  .sugg-item:last-child{border-bottom:none}
+  .sugg-item:active{background:var(--bg)}
 </style>
 </head>
 <body>
@@ -114,14 +122,8 @@
 <div id="tabGravar">
   <div class="section">
     <div class="section-title">Selecione a pessoa</div>
-    <div id="sectorMkt">
-      <div class="sector-label">Marketing</div>
-      <div class="people-grid" id="gridMkt"></div>
-    </div>
-    <div id="sectorCs" style="margin-top:8px">
-      <div class="sector-label">CS</div>
-      <div class="people-grid" id="gridCs"></div>
-    </div>
+    <div id="sectorMkt"></div>
+    <div id="sectorExtra"></div>
   </div>
   <div class="section" style="padding-top:0">
     <div class="rec-card">
@@ -165,15 +167,11 @@
     <div class="add-form" id="addForm" style="display:none">
       <input type="text" id="newName" placeholder="Nome completo">
       <input type="text" id="newRole" placeholder="Cargo">
-      <select id="newType">
-        <option value="s">Supervisor(a)</option>
-        <option value="c">Colaborador(a) estratégico</option>
-        <option value="n">Em integração (em breve)</option>
-      </select>
-      <select id="newSector">
-        <option value="mkt">Marketing</option>
-        <option value="cs">CS</option>
-      </select>
+      <div style="position:relative">
+        <input type="text" id="newSectorInput" placeholder="Setor (ex: Marketing, CS, Comercial)" autocomplete="off" oninput="showSectorSugg('newSectorInput','newSectorSugg')" onblur="hideSugg('newSectorSugg')">
+        <div id="newSectorSugg" class="sugg-list" style="display:none"></div>
+      </div>
+      <input type="text" id="newTag" placeholder="Tag (opcional: licença, sênior, promovido...)">
       <button class="add-btn" onclick="addPerson()">Adicionar</button>
     </div>
   </div>
@@ -204,57 +202,97 @@ const defaultTeam = [
 
 let team = JSON.parse(localStorage.getItem('equipe') || 'null') || defaultTeam;
 
+
+// ── Setores dinâmicos ──────────────────────────────────────────────────────
 function initials(n){ return n.split(' ').slice(0,2).map(x=>x[0].toUpperCase()).join(''); }
 function avClass(t){ return t==='c'?'av-c':t==='n'?'av-n':'av-s'; }
 
-function renderPeople(){
-  const mkt = team.filter(p=>p.sector==='mkt'&&p.active!==false);
-  const cs  = team.filter(p=>p.sector==='cs' &&p.active!==false);
-  document.getElementById('gridMkt').innerHTML = mkt.map(p=>`
-    <div class="person-card" id="pc${p.id}" onclick="selectPerson(${p.id})">
-      <div class="avatar ${avClass(p.type)}">${initials(p.name)}</div>
-      <div class="person-info">
-        <div class="pname">${p.name}</div>
-        <div class="prole">${p.role}</div>
-      </div>
-    </div>`).join('');
-  document.getElementById('gridCs').innerHTML = cs.map(p=>`
-    <div class="person-card" id="pc${p.id}" onclick="selectPerson(${p.id})">
-      <div class="avatar ${avClass(p.type)}">${initials(p.name)}</div>
-      <div class="person-info">
-        <div class="pname">${p.name}</div>
-        <div class="prole">${p.role}</div>
-      </div>
-    </div>`).join('');
+function getSectors(){
+  const s = [...new Set(team.map(p=>p.sector))];
+  return s.length ? s : ['mkt','cs'];
+}
+function sectorLabel(k){
+  const map = {'mkt':'Marketing','cs':'CS'};
+  return map[k] || k.charAt(0).toUpperCase()+k.slice(1);
+}
+function sectorKey(input){
+  const v = input.trim();
+  if(!v) return 'mkt';
+  const map = {'marketing':'mkt','cs':'cs','comercial':'comercial'};
+  return map[v.toLowerCase()] || v.toLowerCase().replace(/\s+/g,'-');
 }
 
+function showSectorSugg(inputId, suggId){
+  const val = document.getElementById(inputId).value.toLowerCase();
+  const sectors = getSectors();
+  const filtered = sectors.filter(s=>sectorLabel(s).toLowerCase().includes(val));
+  const box = document.getElementById(suggId);
+  if(!filtered.length){box.style.display='none';return;}
+  box.innerHTML = filtered.map(s=>`<div class="sugg-item" onmousedown="pickSector('${inputId}','${suggId}','${sectorLabel(s)}')">${sectorLabel(s)}</div>`).join('');
+  box.style.display = 'block';
+}
+function hideSugg(id){ setTimeout(()=>{const b=document.getElementById(id);if(b)b.style.display='none';},200); }
+function pickSector(inputId, suggId, val){
+  document.getElementById(inputId).value = val;
+  document.getElementById(suggId).style.display = 'none';
+}
+
+// ── Renderização da grade de pessoas (dinâmica por setor) ──────────────────
+function renderPeople(){
+  const sectors = getSectors();
+  const container = document.getElementById('sectorMkt');
+  if(!container) return;
+  // Usar o pai de sectorMkt como container geral
+  const parent = container.parentElement;
+  // Remover todas as seções de setor antigas
+  parent.querySelectorAll('.sector-section').forEach(el=>el.remove());
+  
+  sectors.forEach(s=>{
+    const members = team.filter(p=>p.sector===s&&p.active!==false);
+    if(!members.length) return;
+    const cards = members.map(p=>`
+      <div class="person-card" id="pc${p.id}" onclick="selectPerson(${p.id})">
+        <div class="avatar av-s">${initials(p.name)}</div>
+        <div class="person-info">
+          <div class="pname">${p.name}</div>
+          <div class="prole">${p.role}</div>
+        </div>
+      </div>`).join('');
+    const section = document.createElement('div');
+    section.className = 'sector-section';
+    section.style.marginBottom = '4px';
+    section.innerHTML = `<div class="sector-label">${sectorLabel(s)}</div><div class="people-grid">${cards}</div>`;
+    parent.insertBefore(section, document.getElementById('sectorExtra') || null);
+  });
+}
+
+// ── Badge — só tag livre, sem inferência automática ────────────────────────
 function badgeHtml(p){
-  if(p.tag) return `<span class="badge-sm" style="background:var(--bg);color:var(--text2);border:0.5px solid var(--border)">${p.tag}</span>`;
-  if(p.note && p.note.includes('licença')) return `<span class="badge-sm b-lic">licença</span>`;
-  if(p.type==='n') return `<span class="badge-sm b-new">em breve</span>`;
-  if(p.type==='c') return `<span class="badge-sm b-col">estratégico</span>`;
+  if(p.tag && p.tag.trim()) return `<span class="badge-sm" style="background:var(--bg);color:var(--text2);border:0.5px solid var(--border)">${p.tag.trim()}</span>`;
   return '';
 }
 
+// ── Lista da aba Equipe ────────────────────────────────────────────────────
 function renderTeamList(){
-  const sectors = [{key:'mkt',label:'Marketing'},{key:'cs',label:'CS'}];
+  const sectors = getSectors();
   let html = '';
   sectors.forEach(s=>{
-    const members = team.filter(p=>p.sector===s.key);
-    html += `<div class="sector-label">${s.label}</div>`;
+    const members = team.filter(p=>p.sector===s);
+    if(!members.length) return;
+    html += `<div class="sector-label">${sectorLabel(s)}</div>`;
     members.forEach(p=>{
-      const inactive = p.active===false ? ' style="opacity:.45"' : '';
+      const dimmed = p.active===false ? ' style="opacity:.45"' : '';
       html += `<div id="ti${p.id}">
-        <div class="team-item"${inactive}>
-          <div class="avatar ${avClass(p.type)}">${initials(p.name)}</div>
+        <div class="team-item"${dimmed}>
+          <div class="avatar av-s">${initials(p.name)}</div>
           <div class="tinfo">
             <div class="tname">${p.name}${badgeHtml(p)}</div>
-            <div class="trole">${p.role}</div>
+            <div class="trole">${p.role} · <span style="color:var(--text3);font-size:11px">${sectorLabel(p.sector)}</span></div>
           </div>
           <div class="team-actions">
-            <button class="icon-btn" onclick="toggleEdit(${p.id})" title="Editar">✎</button>
+            <button class="icon-btn" onclick="toggleEdit(${p.id})">✎</button>
             ${p.active!==false
-              ? `<button class="icon-btn" onclick="deactivate(${p.id})" title="Desativar" style="font-size:18px">×</button>`
+              ? `<button class="icon-btn" onclick="deactivate(${p.id})" style="font-size:18px">×</button>`
               : `<button class="icon-btn" onclick="reactivate(${p.id})" style="color:var(--blue);font-size:12px">reativar</button>`}
           </div>
         </div>
@@ -262,16 +300,12 @@ function renderTeamList(){
           <div class="edit-note">Editando: <strong>${p.name}</strong></div>
           <input type="text" id="en${p.id}" value="${p.name}" placeholder="Nome">
           <input type="text" id="er${p.id}" value="${p.role}" placeholder="Cargo">
-          <select id="et${p.id}">
-            <option value="s"${p.type==='s'?' selected':''}>Supervisor(a)</option>
-            <option value="c"${p.type==='c'?' selected':''}>Colaborador(a) estratégico</option>
-            <option value="n"${p.type==='n'?' selected':''}>Em integração (em breve)</option>
-          </select>
-          <select id="es${p.id}">
-            <option value="mkt"${p.sector==='mkt'?' selected':''}>Marketing</option>
-            <option value="cs"${p.sector==='cs'?' selected':''}>CS</option>
-          </select>
-            <input type="text" id="enote${p.id}" value="${p.tag||''}" placeholder="Tag livre: licença, sênior, promovido..." style="font-size:12px">
+          <div style="position:relative">
+            <input type="text" id="es${p.id}" value="${sectorLabel(p.sector)}" placeholder="Setor" autocomplete="off"
+              oninput="showSectorSugg('es${p.id}','esugg${p.id}')" onblur="hideSugg('esugg${p.id}')">
+            <div id="esugg${p.id}" class="sugg-list" style="display:none"></div>
+          </div>
+          <input type="text" id="etag${p.id}" value="${p.tag||''}" placeholder="Tag (licença, sênior, promovido... ou deixe vazio)">
           <div class="edit-row">
             <button class="btn-confirm" onclick="saveEdit(${p.id})">Salvar</button>
             <button class="btn-cancel" onclick="toggleEdit(${p.id})">Cancelar</button>
@@ -292,13 +326,51 @@ function saveEdit(id){
   const p = team.find(x=>x.id===id);
   p.name   = document.getElementById('en'+id).value.trim() || p.name;
   p.role   = document.getElementById('er'+id).value.trim() || p.role;
-  p.type   = document.getElementById('et'+id).value;
-  p.sector = document.getElementById('es'+id).value;
-  const tag = document.getElementById('enote'+id).value.trim();
-  if(tag) p.tag = tag; else delete p.tag;
+  p.sector = sectorKey(document.getElementById('es'+id).value);
+  const tag = document.getElementById('etag'+id).value.trim();
+  if(tag) p.tag=tag; else delete p.tag;
   localStorage.setItem('equipe',JSON.stringify(team));
   renderPeople(); renderTeamList();
   showToast(p.name+' atualizado(a)!');
+}
+
+function addPerson(){
+  const name   = document.getElementById('newName').value.trim();
+  const role   = document.getElementById('newRole').value.trim();
+  const secVal = document.getElementById('newSectorInput').value.trim();
+  const tag    = document.getElementById('newTag').value.trim();
+  if(!name||!role||!secVal){showToast('Preencha nome, cargo e setor',true);return;}
+  const newId  = team.length ? Math.max(...team.map(p=>p.id))+1 : 1;
+  const entry  = {id:newId, name, role, type:'s', sector:sectorKey(secVal), active:true};
+  if(tag) entry.tag = tag;
+  team.push(entry);
+  localStorage.setItem('equipe',JSON.stringify(team));
+  renderPeople(); renderTeamList();
+  document.getElementById('newName').value='';
+  document.getElementById('newRole').value='';
+  document.getElementById('newSectorInput').value='';
+  document.getElementById('newTag').value='';
+  document.getElementById('addForm').style.display='none';
+  showToast(name+' adicionado(a)!');
+}
+
+function deactivate(id){
+  const p=team.find(x=>x.id===id);
+  if(p){p.active=false;localStorage.setItem('equipe',JSON.stringify(team));renderPeople();renderTeamList();showToast(p.name+' desativado(a)');}
+}
+function reactivate(id){
+  const p=team.find(x=>x.id===id);
+  if(p){p.active=true;localStorage.setItem('equipe',JSON.stringify(team));renderPeople();renderTeamList();showToast(p.name+' reativado(a)');}
+}
+
+
+
+
+function showTab(t){
+  document.getElementById('tabGravar').style.display = t==='gravar'?'block':'none';
+  document.getElementById('tabEquipe').style.display = t==='equipe'?'block':'none';
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',(t==='gravar'&&i===0)||(t==='equipe'&&i===1)));
+  if(t==='equipe') renderTeamList();
 }
 
 function selectPerson(id){
@@ -316,43 +388,10 @@ function setType(t){
   });
 }
 
-function showTab(t){
-  document.getElementById('tabGravar').style.display = t==='gravar'?'block':'none';
-  document.getElementById('tabEquipe').style.display = t==='equipe'?'block':'none';
-  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',(t==='gravar'&&i===0)||(t==='equipe'&&i===1)));
-  if(t==='equipe') renderTeamList();
-}
-
 function toggleAddForm(){
   const f = document.getElementById('addForm');
   f.style.display = f.style.display==='none'?'block':'none';
 }
-
-function addPerson(){
-  const name = document.getElementById('newName').value.trim();
-  const role = document.getElementById('newRole').value.trim();
-  const type = document.getElementById('newType').value;
-  const sector = document.getElementById('newSector').value;
-  if(!name||!role){showToast('Preencha nome e cargo',true);return;}
-  const newId = Math.max(...team.map(p=>p.id))+1;
-  team.push({id:newId,name,role,type,sector,active:true});
-  localStorage.setItem('equipe',JSON.stringify(team));
-  renderPeople(); renderTeamList();
-  document.getElementById('newName').value='';
-  document.getElementById('newRole').value='';
-  document.getElementById('addForm').style.display='none';
-  showToast(name+' adicionado(a)!');
-}
-
-function deactivate(id){
-  const p = team.find(x=>x.id===id);
-  if(p){ p.active=false; localStorage.setItem('equipe',JSON.stringify(team)); renderPeople(); renderTeamList(); showToast(p.name+' desativado(a)'); }
-}
-function reactivate(id){
-  const p = team.find(x=>x.id===id);
-  if(p){ p.active=true; localStorage.setItem('equipe',JSON.stringify(team)); renderPeople(); renderTeamList(); showToast(p.name+' reativado(a)'); }
-}
-
 function toggleRec(){
   if(!selPerson){showToast('Selecione uma pessoa primeiro',true);return;}
   if(!isRec) startRec(); else stopRec();
