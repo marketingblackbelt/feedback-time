@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -185,7 +184,7 @@
 <script>
 const DRIVE_FILE = 'feedbacks-time.json';
 const TEAM_FILE  = 'equipe-time.json';
-const CLIENT_ID  = 'SEU_CLIENT_ID_AQUI';
+const CLIENT_ID  = '124671268662-c8m7g0f3620buuv8e589t5f4aenk71v1.apps.googleusercontent.com';
 const SCOPES     = 'https://www.googleapis.com/auth/drive.file';
 
 let accessToken = null, selPerson = null, feedType = 'pos';
@@ -230,6 +229,7 @@ function renderPeople(){
 }
 
 function badgeHtml(p){
+  if(p.tag) return `<span class="badge-sm" style="background:var(--bg);color:var(--text2);border:0.5px solid var(--border)">${p.tag}</span>`;
   if(p.note && p.note.includes('licença')) return `<span class="badge-sm b-lic">licença</span>`;
   if(p.type==='n') return `<span class="badge-sm b-new">em breve</span>`;
   if(p.type==='c') return `<span class="badge-sm b-col">estratégico</span>`;
@@ -271,10 +271,7 @@ function renderTeamList(){
             <option value="mkt"${p.sector==='mkt'?' selected':''}>Marketing</option>
             <option value="cs"${p.sector==='cs'?' selected':''}>CS</option>
           </select>
-          <select id="enote${p.id}">
-            <option value=""${!p.note?' selected':''}>Sem observação</option>
-            <option value="licença maternidade em breve"${p.note&&p.note.includes('licença')?' selected':''}>Licença maternidade em breve</option>
-          </select>
+            <input type="text" id="enote${p.id}" value="${p.tag||''}" placeholder="Tag livre: licença, sênior, promovido..." style="font-size:12px">
           <div class="edit-row">
             <button class="btn-confirm" onclick="saveEdit(${p.id})">Salvar</button>
             <button class="btn-cancel" onclick="toggleEdit(${p.id})">Cancelar</button>
@@ -297,8 +294,8 @@ function saveEdit(id){
   p.role   = document.getElementById('er'+id).value.trim() || p.role;
   p.type   = document.getElementById('et'+id).value;
   p.sector = document.getElementById('es'+id).value;
-  const note = document.getElementById('enote'+id).value;
-  if(note) p.note = note; else delete p.note;
+  const tag = document.getElementById('enote'+id).value.trim();
+  if(tag) p.tag = tag; else delete p.tag;
   localStorage.setItem('equipe',JSON.stringify(team));
   renderPeople(); renderTeamList();
   showToast(p.name+' atualizado(a)!');
